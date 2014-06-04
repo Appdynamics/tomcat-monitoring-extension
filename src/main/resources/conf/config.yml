@@ -1,0 +1,16 @@
+# List of tomcat servers
+server:
+    host: "localhost"
+    port: 9044
+    username: "monitorRole"
+    password: "tomcat"
+
+# Tomcat MBeans
+mbeans:
+    domainName: "Catalina"
+    types: ["ThreadPool", "GlobalRequestProcessor"]
+        
+
+#prefix used to show up metrics in AppDynamics
+metricPrefix:  "Custom Metrics|Tomcat|"
+
