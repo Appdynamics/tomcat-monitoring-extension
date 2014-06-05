@@ -8,7 +8,9 @@ server:
 # Tomcat MBeans
 mbeans:
     domainName: "Catalina"
-    types: ["ThreadPool", "GlobalRequestProcessor"]
+    types: [ThreadPool,GlobalRequestProcessor]
+
+    excludePatterns: [connectionCount]
         
 
 #prefix used to show up metrics in AppDynamics

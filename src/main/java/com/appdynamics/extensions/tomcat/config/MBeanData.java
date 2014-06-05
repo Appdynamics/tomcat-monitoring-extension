@@ -18,10 +18,11 @@ package com.appdynamics.extensions.tomcat.config;
 import java.util.HashSet;
 import java.util.Set;
 
-public class MBeans {
+public class MBeanData {
 
 	private String domainName;
 	private Set<String> types = new HashSet<String>();
+	private Set<String> excludePatterns = new HashSet<String>();
 
 	public String getDomainName() {
 		return domainName;
@@ -37,5 +38,13 @@ public class MBeans {
 
 	public void setTypes(Set<String> types) {
 		this.types = types;
+	}
+
+	public Set<String> getExcludePatterns() {
+		return excludePatterns;
+	}
+
+	public void setExcludePatterns(Set<String> excludePatterns) {
+		this.excludePatterns = excludePatterns;
 	}
 }

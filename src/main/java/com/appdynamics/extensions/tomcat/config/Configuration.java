@@ -18,7 +18,7 @@ package com.appdynamics.extensions.tomcat.config;
 public class Configuration {
 
 	private Server server;
-	private MBeans mbeans;
+	private MBeanData mbeans;
 	private String metricPrefix;
 
 	public Server getServer() {
@@ -29,11 +29,11 @@ public class Configuration {
 		this.server = server;
 	}
 
-	public MBeans getMbeans() {
+	public MBeanData getMbeans() {
 		return mbeans;
 	}
 
-	public void setMbeans(MBeans mbeans) {
+	public void setMbeans(MBeanData mbeans) {
 		this.mbeans = mbeans;
 	}
 

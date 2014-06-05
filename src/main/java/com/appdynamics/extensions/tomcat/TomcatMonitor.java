@@ -34,8 +34,10 @@ import com.appdynamics.extensions.jmx.JMXConnectionUtil;
 import com.appdynamics.extensions.jmx.MBeanKeyPropertyEnum;
 import com.appdynamics.extensions.tomcat.config.ConfigUtil;
 import com.appdynamics.extensions.tomcat.config.Configuration;
-import com.appdynamics.extensions.tomcat.config.MBeans;
+import com.appdynamics.extensions.tomcat.config.MBeanData;
 import com.appdynamics.extensions.tomcat.config.Server;
+import com.appdynamics.extensions.tomcat.config.TomcatMBeanKeyPropertyEnum;
+import com.appdynamics.extensions.tomcat.config.TomcatMonitorConstants;
 import com.google.common.base.Strings;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
@@ -81,22 +83,33 @@ public class TomcatMonitor extends AManagedMonitor {
 	private Map<String, String> populateMetrics(Configuration config) throws Exception {
 		Map<String, String> metrics = new HashMap<String, String>();
 		Server server = config.getServer();
-		MBeans mbeanData = config.getMbeans();
-		jmxConnector = new JMXConnectionUtil(new JMXConnectionConfig(server.getHost(), server.getPort(), server.getUsername(), server.getPassword()));
-		JMXConnector connector = jmxConnector.connect();
-		if (connector != null) {
-			Set<ObjectInstance> allMbeans = jmxConnector.getAllMBeans();
-			if (allMbeans != null) {
-				metrics = extractMetrics(mbeanData, allMbeans);
+		MBeanData mbeanData = config.getMbeans();
+		try {
+			jmxConnector = new JMXConnectionUtil(new JMXConnectionConfig(server.getHost(), server.getPort(), server.getUsername(),
+					server.getPassword()));
+			JMXConnector connector = jmxConnector.connect();
+			if (connector != null) {
+				Set<ObjectInstance> allMbeans = jmxConnector.getAllMBeans();
+				if (allMbeans != null) {
+					metrics = extractMetrics(mbeanData, allMbeans);
+					metrics.put(TomcatMonitorConstants.METRICS_COLLECTED, TomcatMonitorConstants.SUCCESS_VALUE);
+				}
 			}
+		} catch (Exception e) {
+			logger.error("Error JMX-ing into Tomcat Server ", e);
+			metrics.put(TomcatMonitorConstants.METRICS_COLLECTED, TomcatMonitorConstants.ERROR_VALUE);
+		} finally {
+			jmxConnector.close();
 		}
 		return metrics;
 	}
 
-	private Map<String, String> extractMetrics(MBeans mbeanData, Set<ObjectInstance> allMbeans) {
+	private Map<String, String> extractMetrics(MBeanData mbeanData, Set<ObjectInstance> allMbeans) {
 		Map<String, String> metrics = new HashMap<String, String>();
+		Set<String> excludePatterns = mbeanData.getExcludePatterns();
 		for (ObjectInstance mbean : allMbeans) {
 			ObjectName objectName = mbean.getObjectName();
+		//	metrics = populateGlobalMetrics(objectName, metrics);
 			if (isDomainAndKeyPropertyConfigured(objectName, mbeanData)) {
 				MBeanAttributeInfo[] attributes = jmxConnector.fetchAllAttributesForMbean(objectName);
 				if (attributes != null) {
@@ -105,7 +118,13 @@ public class TomcatMonitor extends AManagedMonitor {
 							Object attribute = jmxConnector.getMBeanAttribute(objectName, attr.getName());
 							if (attribute != null && attribute instanceof Number) {
 								String metricKey = getMetricsKey(objectName, attr);
-								metrics.put(metricKey, attribute.toString());
+								if(!isKeyExcluded(metricKey, excludePatterns)) {
+									metrics.put(metricKey, attribute.toString());
+								} else {
+                                    if (logger.isDebugEnabled()) {
+                                        logger.info(metricKey + " is excluded");
+                                    }
+								}
 							}
 						}
 					}
@@ -114,8 +133,35 @@ public class TomcatMonitor extends AManagedMonitor {
 		}
 		return metrics;
 	}
+	
+	private boolean isKeyExcluded(String metricKey, Set<String> excludePatterns) {
+        for(String excludePattern : excludePatterns){
+            if(metricKey.matches(escapeText(excludePattern))){
+                return true;
+            }
+        }
+        return false;
+    }
+	
+	private String escapeText(String excludePattern) {
+        return excludePattern.replaceAll("\\|","\\\\|");
+    }
 
-	private boolean isDomainAndKeyPropertyConfigured(ObjectName objectName, MBeans mbeanData) {
+	private Map<String, String> populateGlobalMetrics(ObjectName objectName, Map<String, String> metrics) {
+		String keyProperty = objectName.getKeyProperty(MBeanKeyPropertyEnum.TYPE.toString());
+		String name = objectName.getKeyProperty(MBeanKeyPropertyEnum.NAME.toString());
+		if ("ThreadPool".equals(keyProperty)) {
+			String maxThreads = jmxConnector.getMBeanAttribute(objectName, "maxThreads").toString();
+			metrics.put(name + METRICS_SEPARATOR + "maxThreads", maxThreads);
+		}
+		if ("GlobalRequestProcessor".equals(keyProperty)) {
+			String bytesReceived = jmxConnector.getMBeanAttribute(objectName, "bytesReceived").toString();
+			metrics.put(name + METRICS_SEPARATOR + "bytesReceived", bytesReceived);
+		}
+		return metrics;
+	}
+
+	private boolean isDomainAndKeyPropertyConfigured(ObjectName objectName, MBeanData mbeanData) {
 		String domain = objectName.getDomain();
 		String keyProperty = objectName.getKeyProperty(MBeanKeyPropertyEnum.TYPE.toString());
 		Set<String> types = mbeanData.getTypes();
@@ -124,11 +170,18 @@ public class TomcatMonitor extends AManagedMonitor {
 	}
 
 	private String getMetricsKey(ObjectName objectName, MBeanAttributeInfo attr) {
+		String type = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.TYPE.toString());
+		String context = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.CONTEXT.toString());
+		String host = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.HOST.toString());
+		String worker = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.WORKER.toString());
 		String name = objectName.getKeyProperty(MBeanKeyPropertyEnum.NAME.toString());
-		String type = objectName.getKeyProperty(MBeanKeyPropertyEnum.TYPE.toString());
+
 		StringBuilder metricsKey = new StringBuilder();
-		metricsKey.append(Strings.isNullOrEmpty(name) ? "" : name + METRICS_SEPARATOR);
 		metricsKey.append(Strings.isNullOrEmpty(type) ? "" : type + METRICS_SEPARATOR);
+		metricsKey.append(Strings.isNullOrEmpty(context) ? "" : context + METRICS_SEPARATOR);
+		metricsKey.append(Strings.isNullOrEmpty(host) ? "" : host + METRICS_SEPARATOR);
+		metricsKey.append(Strings.isNullOrEmpty(worker) ? "" : worker + METRICS_SEPARATOR);
+		metricsKey.append(Strings.isNullOrEmpty(name) ? "" : name + METRICS_SEPARATOR);
 		metricsKey.append(attr.getName());
 
 		return metricsKey.toString();
