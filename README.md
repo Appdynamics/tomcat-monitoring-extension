@@ -24,15 +24,14 @@ In the AppDynamics Metric Browser, look for: Application Infrastructure Performa
 Note : Please make sure not to use tab (\t) while editing yaml files. You can validate the yaml file using a [yaml validator](http://yamllint.com/)
 
 1. Configure the Tomcat Extension by editing the config.yml file in `<MACHINE_AGENT_HOME>/monitors/TomcatMonitor/`.
-2. Specify the Tomcat instance host, JMX port, username and password in the config.yml. 
-Also configure the MBeans you need for this extension to report the metrics. By default, "Catalina" is the domain name. Specify the types of MBeans you are interested. Tomcat MBean ObjectName is of the form 'Catalina:type=ThreadPool,name="ajp-bio-8009"'. Please refer [here](http://tomcat.apache.org/tomcat-6.0-doc/funcspecs/mbean-names.html) for detailed Tomcat MBean Names.
+2. Specify the Tomcat instance host, JMX port, username and password in the config.yml. Configure the MBeans for this extension to report the metrics to Controller. By default, "Catalina" is the domain name. Specify the keyproperty 'type' of MBeans you are interested. Tomcat MBean ObjectName is of the form 'Catalina:type=ThreadPool,name="ajp-bio-8009"'. Please refer [here](http://tomcat.apache.org/tomcat-6.0-doc/funcspecs/mbean-names.html) for detailed Tomcat MBean Names.
 You can also add excludePatterns (regex) to exclude any metric tree from showing up in the AppDynamics controller.
 
    For eg.
    ```
         # Tomcat instance
         server:
-          - host: "localhost"
+            host: "localhost"
             port: 9044
             username: ""
             password: ""
