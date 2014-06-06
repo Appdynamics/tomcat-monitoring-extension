@@ -24,7 +24,7 @@ import org.yaml.snakeyaml.constructor.Constructor;
 
 public class ConfigUtil<T> {
 
-	private static final Logger logger = Logger.getLogger(ConfigUtil.class);
+	private static final Logger logger = Logger.getLogger("com.singularity.extensions.ConfigUtil");
 
 	public T readConfig(String fileName, Class<T> clazz) throws FileNotFoundException {
 		logger.info("Reading config file: " + fileName);

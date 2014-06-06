@@ -13,7 +13,7 @@ By default, JMX is disabled in the Tomcat instance. JMX has to be enabled in the
 ##Installation
 
 1. Run 'mvn clean install' from the tomcat-monitoring-extension directory and find the TomcatMonitor.zip in the 'target' directory.
-2. Unzip TomcatMonitor.zip and copy the 'TomcatMonitor' directory to \<machineagent install dir\>/monitors/
+2. Unzip TomcatMonitor.zip and copy the 'TomcatMonitor' directory to `<MACHINE_AGENT_HOME>/monitors/`
 3. Configure the extension by referring to the below section.
 5. Restart the Machine Agent.
 
@@ -68,6 +68,12 @@ You can also add excludePatterns (regex) to exclude any metric tree from showing
 
 
 ##Metrics
+
+* ThreadPool: maxThreads, currentThreadCount, currentThreadsBusy, connectionCount
+* GlobalRequestProcessor: requestCount, errorCount, bytesReceived, bytesSent, processingTime, maxTime
+* RequestProcessor: requestCount, errorCount, requestProcessingTime
+* Manager (per Webapp): sessionCounter, activeSessions, expiredSessions, maxActive, rejectedSessions
+
 
 ## Custom Dashboard
 ![]()

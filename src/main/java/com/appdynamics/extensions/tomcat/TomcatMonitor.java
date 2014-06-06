@@ -31,7 +31,6 @@ import org.apache.log4j.Logger;
 import com.appdynamics.extensions.PathResolver;
 import com.appdynamics.extensions.jmx.JMXConnectionConfig;
 import com.appdynamics.extensions.jmx.JMXConnectionUtil;
-import com.appdynamics.extensions.jmx.MBeanKeyPropertyEnum;
 import com.appdynamics.extensions.tomcat.config.ConfigUtil;
 import com.appdynamics.extensions.tomcat.config.Configuration;
 import com.appdynamics.extensions.tomcat.config.MBeanData;
@@ -47,7 +46,7 @@ import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException
 
 public class TomcatMonitor extends AManagedMonitor {
 
-	public static final Logger logger = Logger.getLogger(TomcatMonitor.class);
+	public static final Logger logger = Logger.getLogger("com.singularity.extensions.TomcatMonitor");
 	public static final String METRICS_SEPARATOR = "|";
 	private static final String CONFIG_ARG = "config-file";
 
@@ -67,7 +66,7 @@ public class TomcatMonitor extends AManagedMonitor {
 			String configFilename = getConfigFilename(taskArgs.get(CONFIG_ARG));
 			try {
 				Configuration config = configUtil.readConfig(configFilename, Configuration.class);
-				Map<String, String> metrics = populateMetrics(config);
+				Map<String, String> metrics = populateStats(config);
 				printStats(config, metrics);
 				logger.info("Completed the Tomcat Monitoring Task successfully");
 				return new TaskOutput("Tomcat Monitor executed successfully");
@@ -80,7 +79,7 @@ public class TomcatMonitor extends AManagedMonitor {
 		throw new TaskExecutionException("Tomcat Monitor completed with failures");
 	}
 
-	private Map<String, String> populateMetrics(Configuration config) throws Exception {
+	private Map<String, String> populateStats(Configuration config) throws Exception {
 		Map<String, String> metrics = new HashMap<String, String>();
 		Server server = config.getServer();
 		MBeanData mbeanData = config.getMbeans();
@@ -109,7 +108,7 @@ public class TomcatMonitor extends AManagedMonitor {
 		Set<String> excludePatterns = mbeanData.getExcludePatterns();
 		for (ObjectInstance mbean : allMbeans) {
 			ObjectName objectName = mbean.getObjectName();
-		//	metrics = populateGlobalMetrics(objectName, metrics);
+			// metrics = populateGlobalMetrics(objectName, metrics);
 			if (isDomainAndKeyPropertyConfigured(objectName, mbeanData)) {
 				MBeanAttributeInfo[] attributes = jmxConnector.fetchAllAttributesForMbean(objectName);
 				if (attributes != null) {
@@ -118,12 +117,12 @@ public class TomcatMonitor extends AManagedMonitor {
 							Object attribute = jmxConnector.getMBeanAttribute(objectName, attr.getName());
 							if (attribute != null && attribute instanceof Number) {
 								String metricKey = getMetricsKey(objectName, attr);
-								if(!isKeyExcluded(metricKey, excludePatterns)) {
+								if (!isKeyExcluded(metricKey, excludePatterns)) {
 									metrics.put(metricKey, attribute.toString());
 								} else {
-                                    if (logger.isDebugEnabled()) {
-                                        logger.info(metricKey + " is excluded");
-                                    }
+									if (logger.isDebugEnabled()) {
+										logger.info(metricKey + " is excluded");
+									}
 								}
 							}
 						}
@@ -133,23 +132,23 @@ public class TomcatMonitor extends AManagedMonitor {
 		}
 		return metrics;
 	}
-	
+
 	private boolean isKeyExcluded(String metricKey, Set<String> excludePatterns) {
-        for(String excludePattern : excludePatterns){
-            if(metricKey.matches(escapeText(excludePattern))){
-                return true;
-            }
-        }
-        return false;
-    }
-	
+		for (String excludePattern : excludePatterns) {
+			if (metricKey.matches(escapeText(excludePattern))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private String escapeText(String excludePattern) {
-        return excludePattern.replaceAll("\\|","\\\\|");
-    }
+		return excludePattern.replaceAll("\\|", "\\\\|");
+	}
 
 	private Map<String, String> populateGlobalMetrics(ObjectName objectName, Map<String, String> metrics) {
-		String keyProperty = objectName.getKeyProperty(MBeanKeyPropertyEnum.TYPE.toString());
-		String name = objectName.getKeyProperty(MBeanKeyPropertyEnum.NAME.toString());
+		String keyProperty = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.TYPE.toString());
+		String name = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.NAME.toString());
 		if ("ThreadPool".equals(keyProperty)) {
 			String maxThreads = jmxConnector.getMBeanAttribute(objectName, "maxThreads").toString();
 			metrics.put(name + METRICS_SEPARATOR + "maxThreads", maxThreads);
@@ -163,7 +162,7 @@ public class TomcatMonitor extends AManagedMonitor {
 
 	private boolean isDomainAndKeyPropertyConfigured(ObjectName objectName, MBeanData mbeanData) {
 		String domain = objectName.getDomain();
-		String keyProperty = objectName.getKeyProperty(MBeanKeyPropertyEnum.TYPE.toString());
+		String keyProperty = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.TYPE.toString());
 		Set<String> types = mbeanData.getTypes();
 		boolean configured = mbeanData.getDomainName().equals(domain) && types.contains(keyProperty);
 		return configured;
@@ -174,7 +173,7 @@ public class TomcatMonitor extends AManagedMonitor {
 		String context = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.CONTEXT.toString());
 		String host = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.HOST.toString());
 		String worker = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.WORKER.toString());
-		String name = objectName.getKeyProperty(MBeanKeyPropertyEnum.NAME.toString());
+		String name = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.NAME.toString());
 
 		StringBuilder metricsKey = new StringBuilder();
 		metricsKey.append(Strings.isNullOrEmpty(type) ? "" : type + METRICS_SEPARATOR);
