@@ -75,7 +75,7 @@ You can also add excludePatterns (regex) to exclude any metric tree from showing
 
 
 ## Custom Dashboard
-![]()
+![](https://github.com/Appdynamics/tomcat-monitoring-extension/raw/master/Dashboard.png)
 
 ##Contributing
 
