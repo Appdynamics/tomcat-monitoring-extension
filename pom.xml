@@ -1,21 +1,16 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-
 	<groupId>com.appdynamics.extensions</groupId>
 	<artifactId>tomcat-monitoring-extension</artifactId>
 	<version>1.0.0</version>
 	<packaging>jar</packaging>
-
 	<name>tomcat-monitoring-extension</name>
 	<url>http://maven.apache.org</url>
-
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
 		<target.dir>${project.build.directory}/TomcatMonitor</target.dir>
 	</properties>
-
 	<dependencies>
 		<dependency>
 			<groupId>com.appdynamics</groupId>
@@ -46,7 +41,6 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-
 	<build>
 		<finalName>${project.artifactId}</finalName>
 		<resources>
@@ -94,10 +88,8 @@
 						</goals>
 						<configuration>
 							<transformers>
-								<transformer
-									implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
-								<transformer
-									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
 										<Implementation-Title>Tomcat Monitor v${project.version} Build Date ${maven.build.timestamp}</Implementation-Title>
 									</manifestEntries>
@@ -125,7 +117,7 @@
 								<copy todir="${target.dir}">
 									<fileset dir="${build.directory}" includes="${project.artifactId}.${project.packaging}" />
 								</copy>
-								<zip destfile="${target.dir}.zip">
+								<zip destfile="${target.dir}v${project.version}.zip">
 									<zipfileset dir="${target.dir}" filemode="755" prefix="TomcatMonitor/" />
 								</zip>
 								<delete dir="${target.dir}" />
