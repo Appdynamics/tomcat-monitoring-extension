@@ -24,7 +24,6 @@ import java.util.Set;
 import javax.management.MBeanAttributeInfo;
 import javax.management.ObjectInstance;
 import javax.management.ObjectName;
-import javax.management.remote.JMXConnector;
 
 import org.apache.log4j.Logger;
 
@@ -49,10 +48,9 @@ public class TomcatMonitor extends AManagedMonitor {
 	public static final Logger logger = Logger.getLogger("com.singularity.extensions.TomcatMonitor");
 	public static final String METRICS_SEPARATOR = "|";
 	private static final String CONFIG_ARG = "config-file";
+	private static final String FILE_NAME = "monitors/TomcatMonitor/config.yml";
 
 	private static final ConfigUtil<Configuration> configUtil = new ConfigUtil<Configuration>();
-
-	private JMXConnectionUtil jmxConnector;
 
 	public TomcatMonitor() {
 		String msg = "Using Monitor Version [" + getImplementationVersion() + "]";
@@ -80,17 +78,17 @@ public class TomcatMonitor extends AManagedMonitor {
 	}
 
 	private Map<String, String> populateStats(Configuration config) throws Exception {
+		JMXConnectionUtil jmxConnector = null;
 		Map<String, String> metrics = new HashMap<String, String>();
 		Server server = config.getServer();
 		MBeanData mbeanData = config.getMbeans();
 		try {
 			jmxConnector = new JMXConnectionUtil(new JMXConnectionConfig(server.getHost(), server.getPort(), server.getUsername(),
 					server.getPassword()));
-			JMXConnector connector = jmxConnector.connect();
-			if (connector != null) {
+			if (jmxConnector != null && jmxConnector.connect() != null) {
 				Set<ObjectInstance> allMbeans = jmxConnector.getAllMBeans();
 				if (allMbeans != null) {
-					metrics = extractMetrics(mbeanData, allMbeans);
+					metrics = extractMetrics(jmxConnector, mbeanData, allMbeans);
 					metrics.put(TomcatMonitorConstants.METRICS_COLLECTED, TomcatMonitorConstants.SUCCESS_VALUE);
 				}
 			}
@@ -103,12 +101,11 @@ public class TomcatMonitor extends AManagedMonitor {
 		return metrics;
 	}
 
-	private Map<String, String> extractMetrics(MBeanData mbeanData, Set<ObjectInstance> allMbeans) {
+	private Map<String, String> extractMetrics(JMXConnectionUtil jmxConnector, MBeanData mbeanData, Set<ObjectInstance> allMbeans) {
 		Map<String, String> metrics = new HashMap<String, String>();
 		Set<String> excludePatterns = mbeanData.getExcludePatterns();
 		for (ObjectInstance mbean : allMbeans) {
 			ObjectName objectName = mbean.getObjectName();
-			// metrics = populateGlobalMetrics(objectName, metrics);
 			if (isDomainAndKeyPropertyConfigured(objectName, mbeanData)) {
 				MBeanAttributeInfo[] attributes = jmxConnector.fetchAllAttributesForMbean(objectName);
 				if (attributes != null) {
@@ -144,20 +141,6 @@ public class TomcatMonitor extends AManagedMonitor {
 
 	private String escapeText(String excludePattern) {
 		return excludePattern.replaceAll("\\|", "\\\\|");
-	}
-
-	private Map<String, String> populateGlobalMetrics(ObjectName objectName, Map<String, String> metrics) {
-		String keyProperty = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.TYPE.toString());
-		String name = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.NAME.toString());
-		if ("ThreadPool".equals(keyProperty)) {
-			String maxThreads = jmxConnector.getMBeanAttribute(objectName, "maxThreads").toString();
-			metrics.put(name + METRICS_SEPARATOR + "maxThreads", maxThreads);
-		}
-		if ("GlobalRequestProcessor".equals(keyProperty)) {
-			String bytesReceived = jmxConnector.getMBeanAttribute(objectName, "bytesReceived").toString();
-			metrics.put(name + METRICS_SEPARATOR + "bytesReceived", bytesReceived);
-		}
-		return metrics;
 	}
 
 	private boolean isDomainAndKeyPropertyConfigured(ObjectName objectName, MBeanData mbeanData) {
@@ -202,6 +185,10 @@ public class TomcatMonitor extends AManagedMonitor {
 	private String getConfigFilename(String filename) {
 		if (filename == null) {
 			return "";
+		}
+
+		if ("".equals(filename)) {
+			filename = FILE_NAME;
 		}
 		// for absolute paths
 		if (new File(filename).exists()) {

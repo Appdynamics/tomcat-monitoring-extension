@@ -8,7 +8,7 @@ Apache Tomcat is an open source software implementation of the Java Servlet and 
 
 ##Prerequisites
 
-By default, JMX is disabled in the Tomcat instance. JMX has to be enabled in the Tomcat instance for this extension to work. To enable JMX please refer [here] (http://tomcat.apache.org/tomcat-7.0-doc/monitoring.html).
+By default, JMX is disabled in the Tomcat instance. Please enable JMX to use this extension. For more information on enabling JMX, please refer [http://tomcat.apache.org/tomcat-7.0-doc/monitoring.html] (http://tomcat.apache.org/tomcat-7.0-doc/monitoring.html).
 
 ##Installation
 

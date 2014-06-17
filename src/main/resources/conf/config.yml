@@ -1,4 +1,5 @@
-# List of tomcat servers
+# Tomcat instance particulars
+
 server:
     host: "localhost"
     port: 9044
