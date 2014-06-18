@@ -8,7 +8,7 @@ Apache Tomcat is an open source software implementation of the Java Servlet and 
 
 ##Prerequisites
 
-By default, JMX is disabled in the Tomcat instance. Please enable JMX to use this extension. For more information on enabling JMX, please refer [http://tomcat.apache.org/tomcat-7.0-doc/monitoring.html] (http://tomcat.apache.org/tomcat-7.0-doc/monitoring.html).
+By default, JMX is disabled in the Tomcat distribution. To use this extension please enable JMX in your instance. For information on enabling JMX, please refer to [http://tomcat.apache.org/tomcat-7.0-doc/monitoring.html] (http://tomcat.apache.org/tomcat-7.0-doc/monitoring.html).
 
 ##Installation
 
@@ -17,7 +17,7 @@ By default, JMX is disabled in the Tomcat instance. Please enable JMX to use thi
 3. Configure the extension by referring to the below section.
 5. Restart the Machine Agent.
 
-In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Tomcat in the case of default metric path
+In the AppDynamics Metric Browser, look for: Application Infrastructure Performance  | \<Tier\> | Custom Metrics | Tomcat in case of default metric path
 
 ## Configuration
 
