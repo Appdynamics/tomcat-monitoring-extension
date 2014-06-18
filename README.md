@@ -83,7 +83,7 @@ Always feel free to fork and contribute any changes directly here on GitHub.
 
 ##Community
 
-Find out more in the [AppSphere](http://community.appdynamics.com/t5/AppDynamics-eXchange/idb-p/extensions) community.
+Find out more in the [AppSphere](http://community.appdynamics.com/t5/AppDynamics-eXchange/Tomcat-Monitoring-Extension/idi-p/9070) community.
 
 ##Support
 
