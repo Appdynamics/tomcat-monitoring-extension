@@ -30,21 +30,28 @@ You can also add excludePatterns (regex) to exclude any metric tree from showing
    For eg.
    ```
         # Tomcat instance
-        server:
-            host: "localhost"
+        servers:
+          - host: "localhost"
             port: 9044
             username: ""
             password: ""
+            displayName: ""
             
 
         # Tomcat mbeans. Exclude patterns with regex can be used to exclude any unwanted metrics.
         mbeans:
-            domainName: "Catalina"
+          - domainName: "Catalina"
             types: [ThreadPool,GlobalRequestProcessor]
             excludePatterns: [
               "Cache|.*",
               "connectionCount",
              ]
+
+        # number of concurrent tasks
+		numberOfThreads: 10
+
+		#timeout for the thread
+		threadTimeout: 30
 
         #prefix used to show up metrics in AppDynamics
         metricPrefix:  "Custom Metrics|Tomcat|"

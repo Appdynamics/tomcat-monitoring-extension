@@ -13,47 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.appdynamics.extensions.tomcat.config;
+package com.appdynamics.extensions.tomcat;
 
-public class Server {
+import java.util.Map;
 
-	private String host;
-	private int port;
-	private String username;
-	private String password;
+import com.google.common.collect.Maps;
+
+public class TomcatMetrics {
+
 	private String displayName;
-
-	public String getHost() {
-		return host;
-	}
-
-	public void setHost(String host) {
-		this.host = host;
-	}
-
-	public int getPort() {
-		return port;
-	}
-
-	public void setPort(int port) {
-		this.port = port;
-	}
-
-	public String getUsername() {
-		return username;
-	}
-
-	public void setUsername(String username) {
-		this.username = username;
-	}
-
-	public String getPassword() {
-		return password;
-	}
-
-	public void setPassword(String password) {
-		this.password = password;
-	}
+	private Map<String, String> metrics;
 
 	public String getDisplayName() {
 		return displayName;
@@ -61,5 +30,16 @@ public class Server {
 
 	public void setDisplayName(String displayName) {
 		this.displayName = displayName;
+	}
+
+	public Map<String, String> getMetrics() {
+		if (metrics == null) {
+			metrics = Maps.newHashMap();
+		}
+		return metrics;
+	}
+
+	public void setMetrics(Map<String, String> metrics) {
+		this.metrics = metrics;
 	}
 }

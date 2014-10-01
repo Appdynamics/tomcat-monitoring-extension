@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.appdynamics.extensions</groupId>
 	<artifactId>tomcat-monitoring-extension</artifactId>
-	<version>1.0.0</version>
+	<version>1.1</version>
 	<packaging>jar</packaging>
 	<name>tomcat-monitoring-extension</name>
 	<url>http://maven.apache.org</url>
@@ -21,7 +21,7 @@
 		<dependency>
 			<groupId>com.appdynamics</groupId>
 			<artifactId>appd-exts-commons</artifactId>
-			<version>1.0.7</version>
+			<version>1.0.8</version>
 		</dependency>
 		<dependency>
 			<groupId>org.yaml</groupId>
@@ -115,7 +115,7 @@
 									<fileset dir="src/main/resources/conf" includes="config.yml" />
 								</copy>
 								<copy todir="${target.dir}">
-									<fileset dir="${build.directory}" includes="${project.artifactId}.${project.packaging}" />
+									<fileset dir="${project.build.directory}" includes="${project.artifactId}.${project.packaging}" />
 								</copy>
 								<zip destfile="${target.dir}v${project.version}.zip">
 									<zipfileset dir="${target.dir}" filemode="755" prefix="TomcatMonitor/" />

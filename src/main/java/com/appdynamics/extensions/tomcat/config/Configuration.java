@@ -17,23 +17,25 @@ package com.appdynamics.extensions.tomcat.config;
 
 public class Configuration {
 
-	private Server server;
-	private MBeanData mbeans;
+	private Server[] servers;
+	private MBeanData[] mbeans;
 	private String metricPrefix;
+	private int threadTimeout;
+    private int numberOfThreads;
 
-	public Server getServer() {
-		return server;
+	public Server[] getServers() {
+		return servers;
 	}
 
-	public void setServer(Server server) {
-		this.server = server;
+	public void setServers(Server[] servers) {
+		this.servers = servers;
 	}
 
-	public MBeanData getMbeans() {
+	public MBeanData[] getMbeans() {
 		return mbeans;
 	}
 
-	public void setMbeans(MBeanData mbeans) {
+	public void setMbeans(MBeanData[] mbeans) {
 		this.mbeans = mbeans;
 	}
 
@@ -43,5 +45,21 @@ public class Configuration {
 
 	public void setMetricPrefix(String metricPrefix) {
 		this.metricPrefix = metricPrefix;
+	}
+
+	public int getThreadTimeout() {
+		return threadTimeout;
+	}
+
+	public void setThreadTimeout(int threadTimeout) {
+		this.threadTimeout = threadTimeout;
+	}
+
+	public int getNumberOfThreads() {
+		return numberOfThreads;
+	}
+
+	public void setNumberOfThreads(int numberOfThreads) {
+		this.numberOfThreads = numberOfThreads;
 	}
 }

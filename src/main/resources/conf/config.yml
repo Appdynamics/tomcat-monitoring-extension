@@ -1,18 +1,24 @@
 # Tomcat instance particulars
 
-server:
-    host: "localhost"
+servers:
+  - host: "localhost"
     port: 9044
     username: "monitorRole"
     password: "tomcat"
+    displayName: "localhost"
 
 # Tomcat MBeans
 mbeans:
-    domainName: "Catalina"
+  - domainName: "Catalina"
     types: [ThreadPool,GlobalRequestProcessor]
-
     excludePatterns: [connectionCount]
         
+
+# number of concurrent tasks
+numberOfThreads: 10
+
+#timeout for the thread
+threadTimeout: 30
 
 #prefix used to show up metrics in AppDynamics
 metricPrefix:  "Custom Metrics|Tomcat|"

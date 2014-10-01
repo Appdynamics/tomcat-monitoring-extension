@@ -17,25 +17,20 @@ package com.appdynamics.extensions.tomcat;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-import javax.management.MBeanAttributeInfo;
-import javax.management.ObjectInstance;
-import javax.management.ObjectName;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
 import com.appdynamics.extensions.PathResolver;
-import com.appdynamics.extensions.jmx.JMXConnectionConfig;
-import com.appdynamics.extensions.jmx.JMXConnectionUtil;
 import com.appdynamics.extensions.tomcat.config.ConfigUtil;
 import com.appdynamics.extensions.tomcat.config.Configuration;
-import com.appdynamics.extensions.tomcat.config.MBeanData;
 import com.appdynamics.extensions.tomcat.config.Server;
-import com.appdynamics.extensions.tomcat.config.TomcatMBeanKeyPropertyEnum;
-import com.appdynamics.extensions.tomcat.config.TomcatMonitorConstants;
 import com.google.common.base.Strings;
 import com.singularity.ee.agent.systemagent.api.AManagedMonitor;
 import com.singularity.ee.agent.systemagent.api.MetricWriter;
@@ -49,6 +44,10 @@ public class TomcatMonitor extends AManagedMonitor {
 	public static final String METRICS_SEPARATOR = "|";
 	private static final String CONFIG_ARG = "config-file";
 	private static final String FILE_NAME = "monitors/TomcatMonitor/config.yml";
+	private static final int DEFAULT_NUMBER_OF_THREADS = 10;
+	public static final int DEFAULT_THREAD_TIMEOUT = 10;
+
+	private ExecutorService threadPool;
 
 	private static final ConfigUtil<Configuration> configUtil = new ConfigUtil<Configuration>();
 
@@ -64,115 +63,60 @@ public class TomcatMonitor extends AManagedMonitor {
 			String configFilename = getConfigFilename(taskArgs.get(CONFIG_ARG));
 			try {
 				Configuration config = configUtil.readConfig(configFilename, Configuration.class);
-				Map<String, String> metrics = populateStats(config);
-				printStats(config, metrics);
+				threadPool = Executors.newFixedThreadPool(config.getNumberOfThreads() == 0 ? DEFAULT_NUMBER_OF_THREADS : config.getNumberOfThreads());
+				List<Future<TomcatMetrics>> parallelTasks = createConcurrentTasks(config);
+
+				List<TomcatMetrics> tomcatMetrics = collectMetrics(parallelTasks,
+						config.getThreadTimeout() == 0 ? DEFAULT_THREAD_TIMEOUT : config.getThreadTimeout());
+				printStats(config, tomcatMetrics);
 				logger.info("Completed the Tomcat Monitoring Task successfully");
 				return new TaskOutput("Tomcat Monitor executed successfully");
 			} catch (FileNotFoundException e) {
 				logger.error("Config File not found: " + configFilename, e);
 			} catch (Exception e) {
 				logger.error("Metrics Collection Failed: ", e);
+			} finally {
+				if (!threadPool.isShutdown()) {
+					threadPool.shutdown();
+				}
 			}
 		}
 		throw new TaskExecutionException("Tomcat Monitor completed with failures");
 	}
 
-	private Map<String, String> populateStats(Configuration config) throws Exception {
-		JMXConnectionUtil jmxConnector = null;
-		Map<String, String> metrics = new HashMap<String, String>();
-		Server server = config.getServer();
-		MBeanData mbeanData = config.getMbeans();
-		try {
-			jmxConnector = new JMXConnectionUtil(new JMXConnectionConfig(server.getHost(), server.getPort(), server.getUsername(),
-					server.getPassword()));
-			if (jmxConnector != null && jmxConnector.connect() != null) {
-				Set<ObjectInstance> allMbeans = jmxConnector.getAllMBeans();
-				if (allMbeans != null) {
-					metrics = extractMetrics(jmxConnector, mbeanData, allMbeans);
-					metrics.put(TomcatMonitorConstants.METRICS_COLLECTED, TomcatMonitorConstants.SUCCESS_VALUE);
-				}
-			}
-		} catch (Exception e) {
-			logger.error("Error JMX-ing into Tomcat Server ", e);
-			metrics.put(TomcatMonitorConstants.METRICS_COLLECTED, TomcatMonitorConstants.ERROR_VALUE);
-		} finally {
-			jmxConnector.close();
-		}
-		return metrics;
-	}
-
-	private Map<String, String> extractMetrics(JMXConnectionUtil jmxConnector, MBeanData mbeanData, Set<ObjectInstance> allMbeans) {
-		Map<String, String> metrics = new HashMap<String, String>();
-		Set<String> excludePatterns = mbeanData.getExcludePatterns();
-		for (ObjectInstance mbean : allMbeans) {
-			ObjectName objectName = mbean.getObjectName();
-			if (isDomainAndKeyPropertyConfigured(objectName, mbeanData)) {
-				MBeanAttributeInfo[] attributes = jmxConnector.fetchAllAttributesForMbean(objectName);
-				if (attributes != null) {
-					for (MBeanAttributeInfo attr : attributes) {
-						if (attr.isReadable()) {
-							Object attribute = jmxConnector.getMBeanAttribute(objectName, attr.getName());
-							if (attribute != null && attribute instanceof Number) {
-								String metricKey = getMetricsKey(objectName, attr);
-								if (!isKeyExcluded(metricKey, excludePatterns)) {
-									metrics.put(metricKey, attribute.toString());
-								} else {
-									if (logger.isDebugEnabled()) {
-										logger.info(metricKey + " is excluded");
-									}
-								}
-							}
-						}
-					}
-				}
+	private List<Future<TomcatMetrics>> createConcurrentTasks(Configuration config) {
+		List<Future<TomcatMetrics>> parallelTasks = new ArrayList<Future<TomcatMetrics>>();
+		if (config != null && config.getServers() != null) {
+			for (Server server : config.getServers()) {
+				TomcatMonitorTask tomcatTask = new TomcatMonitorTask(server, config.getMbeans());
+				parallelTasks.add(threadPool.submit(tomcatTask));
 			}
 		}
-		return metrics;
+		return parallelTasks;
 	}
 
-	private boolean isKeyExcluded(String metricKey, Set<String> excludePatterns) {
-		for (String excludePattern : excludePatterns) {
-			if (metricKey.matches(escapeText(excludePattern))) {
-				return true;
+	private List<TomcatMetrics> collectMetrics(List<Future<TomcatMetrics>> parallelTasks, int timeout) {
+		List<TomcatMetrics> allMetrics = new ArrayList<TomcatMetrics>();
+		for (Future<TomcatMetrics> aParallelTask : parallelTasks) {
+			TomcatMetrics tomcatMetric = null;
+			try {
+				tomcatMetric = aParallelTask.get(timeout, TimeUnit.SECONDS);
+				allMetrics.add(tomcatMetric);
+			} catch (Exception e) {
+				logger.error("Exception " + e);
 			}
 		}
-		return false;
+		return allMetrics;
 	}
 
-	private String escapeText(String excludePattern) {
-		return excludePattern.replaceAll("\\|", "\\\\|");
-	}
-
-	private boolean isDomainAndKeyPropertyConfigured(ObjectName objectName, MBeanData mbeanData) {
-		String domain = objectName.getDomain();
-		String keyProperty = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.TYPE.toString());
-		Set<String> types = mbeanData.getTypes();
-		boolean configured = mbeanData.getDomainName().equals(domain) && types.contains(keyProperty);
-		return configured;
-	}
-
-	private String getMetricsKey(ObjectName objectName, MBeanAttributeInfo attr) {
-		String type = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.TYPE.toString());
-		String context = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.CONTEXT.toString());
-		String host = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.HOST.toString());
-		String worker = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.WORKER.toString());
-		String name = objectName.getKeyProperty(TomcatMBeanKeyPropertyEnum.NAME.toString());
-
-		StringBuilder metricsKey = new StringBuilder();
-		metricsKey.append(Strings.isNullOrEmpty(type) ? "" : type + METRICS_SEPARATOR);
-		metricsKey.append(Strings.isNullOrEmpty(context) ? "" : context + METRICS_SEPARATOR);
-		metricsKey.append(Strings.isNullOrEmpty(host) ? "" : host + METRICS_SEPARATOR);
-		metricsKey.append(Strings.isNullOrEmpty(worker) ? "" : worker + METRICS_SEPARATOR);
-		metricsKey.append(Strings.isNullOrEmpty(name) ? "" : name + METRICS_SEPARATOR);
-		metricsKey.append(attr.getName());
-
-		return metricsKey.toString();
-	}
-
-	private void printStats(Configuration config, Map<String, String> metrics) {
-		String metricPath = config.getMetricPrefix();
-		for (Map.Entry<String, String> entry : metrics.entrySet()) {
-			printMetric(metricPath + entry.getKey(), entry.getValue());
+	private void printStats(Configuration config, List<TomcatMetrics> tomcatMetrics) {
+		for (TomcatMetrics tMetric : tomcatMetrics) {
+			StringBuilder metricPath = new StringBuilder();
+			metricPath.append(config.getMetricPrefix()).append(tMetric.getDisplayName()).append(METRICS_SEPARATOR);
+			Map<String, String> metricsForAServer = tMetric.getMetrics();
+			for (Map.Entry<String, String> entry : metricsForAServer.entrySet()) {
+				printMetric(metricPath.toString() + entry.getKey(), entry.getValue());
+			}
 		}
 	}
 
