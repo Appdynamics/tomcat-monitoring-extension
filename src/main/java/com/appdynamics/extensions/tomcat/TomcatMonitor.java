@@ -40,7 +40,7 @@ import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException
 
 public class TomcatMonitor extends AManagedMonitor {
 
-	public static final Logger logger = Logger.getLogger("com.singularity.extensions.TomcatMonitor");
+	public static final Logger logger = Logger.getLogger(TomcatMonitor.class);
 	public static final String METRICS_SEPARATOR = "|";
 	private static final String CONFIG_ARG = "config-file";
 	private static final String FILE_NAME = "monitors/TomcatMonitor/config.yml";

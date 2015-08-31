@@ -42,7 +42,7 @@ public class TomcatMonitorTask implements Callable<TomcatMetrics> {
 	private Server server;
 	private Map<String, MBeanData> mbeanLookup;
 	private JMXConnectionUtil jmxConnector;
-	public static final Logger logger = Logger.getLogger("com.singularity.extensions.TomcatMonitorTask");
+	public static final Logger logger = Logger.getLogger(TomcatMonitorTask.class);
 
 	public TomcatMonitorTask(Server server, MBeanData[] mbeansData) {
 		this.server = server;
@@ -99,18 +99,28 @@ public class TomcatMonitorTask implements Callable<TomcatMetrics> {
 				if (attributes != null) {
 					for (MBeanAttributeInfo attr : attributes) {
 						if (attr.isReadable()) {
-							Object attribute = jmxConnector.getMBeanAttribute(objectName, attr.getName());
-							if (attribute != null && attribute instanceof Number) {
-								String metricKey = getMetricsKey(objectName, attr);
-								if (!isKeyExcluded(metricKey, excludePatterns)) {
-									String attrStrValue = MetricUtils.toWholeNumberString(attribute);
-									filteredMetrics.put(metricKey, attrStrValue);
-								} else {
-									if (logger.isDebugEnabled()) {
-										logger.info(metricKey + " is excluded");
-									}
-								}
-							}
+                            String metricKey = getMetricsKey(objectName, attr);
+                            if (!isKeyExcluded(metricKey, excludePatterns)) {
+                                try {
+                                    Object attribute = jmxConnector.getMBeanAttribute(objectName, attr.getName());
+                                    if (attribute != null && attribute instanceof Number) {
+                                        if (logger.isDebugEnabled()) {
+                                            logger.debug("Metric key:value before ceiling = " + metricKey + ":" + String.valueOf(attribute));
+                                        }
+                                        String attrStrValue = MetricUtils.toWholeNumberString(attribute);
+                                        filteredMetrics.put(metricKey, attrStrValue);
+                                    }
+                                } catch (Exception e) {
+                                    logger.error("Error while getting the jmx value object name = " + objectName
+                                            + " attribute " + attr.getName() + ". The error is " + e.getMessage());
+                                    logger.debug("The stacktrace is " + attr.getName(), e);
+                                }
+
+                            } else {
+                                if (logger.isDebugEnabled()) {
+                                    logger.info(metricKey + " is excluded");
+                                }
+                            }
 						}
 					}
 				}
