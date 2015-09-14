@@ -59,7 +59,7 @@ public class TomcatMonitor extends AManagedMonitor {
 
 	public TaskOutput execute(Map<String, String> taskArgs, TaskExecutionContext arg1) throws TaskExecutionException {
 		if (taskArgs != null) {
-			logger.info("Starting the Tomcat Monitoring task.");
+			logger.info("Starting " + getImplementationVersion() + " Monitoring Task");
 			String configFilename = getConfigFilename(taskArgs.get(CONFIG_ARG));
 			try {
 				Configuration config = configUtil.readConfig(configFilename, Configuration.class);
